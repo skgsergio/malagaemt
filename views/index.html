@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Malaga EMT: Buses en tiempo real</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <script src="https://libs.cartocdn.com/carto-vl/v1.0.0/carto-vl.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,500,600" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600" rel="stylesheet">
+    <style type="text/css">
+     * {
+       box-sizing: border-box;
+     }
+
+     body {
+       margin: 0;
+       padding: 0;
+     }
+
+     #map {
+       position: absolute;
+       height: 100%;
+       width: 100%;
+       z-index: 0;
+     }
+
+     .toolbox {
+       position: absolute;
+       top: 24px;
+       right: 24px;
+       min-width: 250px;
+       max-width: 250px;
+       z-index: 2;
+       overflow-wrap: break-word;
+     }
+
+     .box {
+       background: #FFFFFF;
+       z-index: 2;
+       border-radius: 4px;
+       padding: 16px;
+       margin: 0 0 24px;
+       box-shadow: 0 0px 16px rgba(0, 0, 0, 0.24);
+     }
+
+     .box h1 {
+       display: inline-block;
+       color: #2E3C43;
+       line-height: 28px;
+       font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+       font-size: 20px;
+       font-weight: 600;
+       margin: 0;
+       width: calc(100% - 24px);
+     }
+
+     .box h2 {
+       color: #2E3C43;
+       line-height: 32px;
+       font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+       font-size: 20px;
+       font-weight: 600;
+     }
+
+     .box h3 {
+       color: #2E3C43;
+       line-height: 22px;
+       font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+       font-size: 16px;
+       font-weight: 600;
+       margin-top: 8px;
+       margin-bottom: 8px;
+     }
+
+     .box p {
+       color: #747D82;
+       font-size: 12px;
+       line-height: 16px;
+       font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+       font-weight: 400;
+       margin-top: 0;
+       margin-bottom: 0;
+     }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <aside class="toolbox">
+      <div class="box">
+        <header>
+          <h1>Malaga EMT</h1>
+        </header>
+        <section>
+          <p id="update"></p>
+          <p><a href="https://datosabiertos.malaga.eu/dataset/ubicaciones-de-autobuses-emt-en-tiempo-real">Fuente</a></p>
+          <div id="controls">
+            <div id="content"></div>
+          </div>
+        </section>
+        <footer class="js-footer"></footer>
+      </div>
+    </aside>
+
+    <script type="text/javascript">
+     const data_source = '/data.geojson';
+
+     const map = new mapboxgl.Map({
+       container: 'map',
+       style: carto.basemaps.voyager,
+       center: [-4.4203, 36.7201],
+       zoom: 12,
+       dragRotate: false
+     });
+
+     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+
+     let bus_layer;
+
+     map.on('load', () => {
+       // First fetch and layers creation
+       fetch(data_source)
+         .then((res) => {
+           if (res.ok) {
+             return res.json();
+           } else {
+             throw Error(`Failed to obtain data: ${res.status} (${res.statusText})`);
+           }
+         })
+         .then((data) => {
+           // Create a GeoJSON FeatureCollection
+           const geo_data = {
+             type: 'FeatureCollection',
+             features: data
+           };
+
+           // Bus layer: use icons and a ramp of colors using the line number
+           bus_layer = new carto.Layer(
+             'bus_layer',
+             new carto.source.GeoJSON(geo_data),
+             new carto.Viz(`
+         @codLinea: $codLinea
+         @codBus: $codBus
+         @lastUpdate: $last_update
+         @sentido: $sentido
+         color: ramp(@codLinea, Prism)
+         symbol: bus
+         width: 20
+             `)
+           );
+
+           // Interactivity
+           const interactivity = new carto.Interactivity(bus_layer);
+
+           // Show bus info on hover
+           interactivity.on('featureHover', evt => {
+             let content = '';
+
+             evt.features.forEach((f) => {
+               content += `
+           <div class="container">
+             <h3>[${f.variables.codBus.value}] L${parseInt(f.variables.codLinea.value)} - ${f.variables.sentido.value === '1' ? 'Ida' : 'Vuelta'}</h3>
+           </div>
+               `;
+             });
+
+             document.getElementById('content').innerHTML = content;
+           });
+
+           // Change bus color to red when the mouse gets over it
+           interactivity.on('featureEnter', evt => {
+             evt.features.forEach((f) => {
+               f.color.blendTo('rgb(255, 0, 0)', 0);
+             });
+           });
+
+           // Reset bus color to the original one when the cursor goes away
+           interactivity.on('featureLeave', evt => {
+             evt.features.forEach((f) => {
+               f.color.reset(0);
+             });
+           });
+
+           // Define a Mapbox GL source with the GeoJSON for creating labels
+           map.addSource('buses', {
+             type: 'geojson',
+             data: geo_data
+           });
+
+           // Create the layer with the styles and add it to the map
+           map.addLayer({
+             'id': 'cod_bus',
+             'type': 'symbol',
+             'source': 'buses',
+             'symbol-placement': 'line',
+             'layout': {
+               'text-field': '{codBus}',
+               'text-font': ['Open Sans Semibold Italic', 'Arial Unicode MS Bold'],
+               'text-size': 7,
+               'text-offset': [0, -1.8],
+               'text-allow-overlap': true
+             },
+             'paint': {
+               'text-color': '#000',
+               'text-halo-color': '#FFF',
+               'text-halo-width': 2
+             },
+           });
+
+           // Add the bus layer to the map on top of the labels layer
+           map.addLayer(bus_layer);
+
+           // Write the update date
+           document.getElementById('update').innerHTML = new Date().toLocaleString();
+
+           // Update every 20 seconds
+           setInterval(() => {
+             fetch(data_source)
+               .then((res) => {
+                 if (res.ok) {
+                   return res.json();
+                 } else {
+                   throw Error(`Failed to obtain data: ${res.status} (${res.statusText})`);
+                 }
+               })
+               .then((data) => {
+                 // Create a GeoJSON FeatureCollection
+                 const geo_data = {
+                   type: 'FeatureCollection',
+                   features: data
+                 };
+
+                 // Update CARTO VL layer source and Mapbox GL source
+                 bus_layer.update(new carto.source.GeoJSON(geo_data));
+                 map.getSource('buses').setData(geo_data);
+
+                 // Werite the update date
+                 document.getElementById('update').innerHTML = new Date().toLocaleString();
+               })
+               .catch(err => { console.log(err) });
+           }, 20000);
+         })
+         .catch(err => { console.log(err) });
+     });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "malagaemt",
+  "version": "1.0.0",
+  "description": "Malaga EMT realtime viewer using CARTO VL and Mapbox GL",
+  "main": "main.js",
+  "author": "Sergio Conde <skgsergio@gmail.com>",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/skgsergio/malgaemt.git"
+  },
+  "dependencies": {
+    "apicache": "^1.2.3",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "request": "^2.88.0"
+  }
+}
