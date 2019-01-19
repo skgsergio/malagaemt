@@ -4,9 +4,9 @@
     <title>Malaga EMT: Buses en tiempo real</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <script src="https://libs.cartocdn.com/carto-vl/v1.0.0/carto-vl.js"></script>
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://libs.cartocdn.com/carto-vl/v1.1.1/carto-vl.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,500,600" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600" rel="stylesheet">
     <style type="text/css">
@@ -140,13 +140,13 @@
              'bus_layer',
              new carto.source.GeoJSON(geo_data),
              new carto.Viz(`
-         @codLinea: $codLinea
-         @codBus: $codBus
-         @lastUpdate: $last_update
-         @sentido: $sentido
-         color: ramp(@codLinea, Prism)
-         symbol: bus
-         width: 20
+               @codLinea: $codLinea
+               @codBus: $codBus
+               @lastUpdate: $last_update
+               @sentido: $sentido
+               color: ramp(@codLinea, Prism)
+               symbol: bus
+               width: 20
              `)
            );
 
@@ -159,9 +159,9 @@
 
              evt.features.forEach((f) => {
                content += `
-           <div class="container">
-             <h3>[${f.variables.codBus.value}] L${parseInt(f.variables.codLinea.value)} - ${f.variables.sentido.value === '1' ? 'Ida' : 'Vuelta'}</h3>
-           </div>
+                 <div class="container">
+                   <h3>[${f.variables.codBus.value}] L${parseInt(f.variables.codLinea.value)} - ${f.variables.sentido.value === '1' ? 'Ida' : 'Vuelta'}</h3>
+                 </div>
                `;
              });
 
