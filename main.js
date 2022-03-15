@@ -29,9 +29,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/data.geojson', apicache.middleware('1 minute'), (req, res) => {
-    request({ url: config.dataurl })
+    request({ url: config.dataurl, headers: { 'User-Agent': 'malagaemt/0.0.0' } })
         .on('error', (err) => {
-            res.send(500, { error: err });
+            console.log(err);
+            res.status(500).send({ error: err });
         })
         .pipe(res);
 });
